@@ -1,0 +1,5 @@
+pymupdf
+requests
+pandas
+streamlit
+plotly

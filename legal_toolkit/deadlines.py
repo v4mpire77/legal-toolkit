@@ -10,62 +10,76 @@ Legal Basis:
 """
 
 import datetime
+from .holidays import BankHolidayProvider
 
-def next_working_day(date_obj):
+def calculate_deemed_service(sent_at: datetime.datetime, provider: BankHolidayProvider):
     """
-    Adjusts a date to the next working day if it falls on a weekend.
+    Calculates Deemed Service based on CPR 6.14 and 6.26.
     
-    Args:
-        date_obj (datetime.date): The date to check. 
-    
-    Returns:
-        datetime.date: The adjusted date (Monday) or the original date.
-        bool: True if adjusted, False otherwise.
+    CPR 6.26: 4:30 PM Cutoff.
+    CPR 6.14: Deemed served on the second business day after the effective step.
     """
-    # weekday(): 0=Mon, 5=Sat, 6=Sun
-    original = date_obj
-    if date_obj.weekday() == 5:  # Saturday
-        date_obj += datetime.timedelta(days=2)
-    elif date_obj.weekday() == 6:  # Sunday
-        date_obj += datetime.timedelta(days=1)
+    # 1. Normalize Sent Date (CPR 6.26)
+    cutoff_time = datetime.time(16, 30)
+    sent_date = sent_at.date()
     
-    return date_obj, (date_obj != original)
+    is_business = provider.is_business_day(sent_date)
+    is_late = sent_at.time() > cutoff_time
+    
+    print(f"\n[Step 1: CPR 6.26 - Effective Step]")
+    print(f"Actual Transmission: {sent_at.strftime('%Y-%m-%d %H:%M')}")
+    
+    if not is_business or is_late:
+        reason = "Non-business day" if not is_business else "After 16:30 cutoff"
+        effective_date = provider.next_business_day(sent_date)
+        print(f"Adjustment:          Sent {reason}. Effective date moved to next business day.")
+    else:
+        effective_date = sent_date
+        print(f"Adjustment:          None (Sent before 16:30 on a business day).")
+    
+    print(f"Effective Step Date: {effective_date.strftime('%A, %d %B %Y')}")
 
-def calculate_cpr_deadline(service_date_str):
-    """
-    Calculates the 14-day deadline for Acknowledgment of Service / Defence. 
+    # 2. Calculate Deemed Service (CPR 6.14)
+    # Deemed served on the SECOND business day after the effective step
+    deemed_date = provider.add_business_days(effective_date, 2)
     
-    Args:
-        service_date_str (str): Date of service in YYYY-MM-DD format.
+    print(f"\n[Step 2: CPR 6.14 - Deeming Provision]")
+    print(f"Rule:                Second business day after effective step.")
+    print(f"Legal Authority:     CPR Part 6.14")
+    
+    # 3. Calculate Filing Deadline (AOS/Defence - 14 Days)
+    # CPR 10.3(1)(b)
+    base_deadline = deemed_date + datetime.timedelta(days=14)
+    final_deadline = base_deadline
+    if not provider.is_business_day(base_deadline):
+        final_deadline = provider.next_business_day(base_deadline)
+        print(f"\n[Step 3: CPR 2.8(5) - Deadline Adjustment]")
+        print(f"Condition:           14-day deadline fell on a weekend/holiday.")
+        print(f"Filing Deadline:     Moved to {final_deadline.strftime('%A, %d %B %Y')}")
+    else:
+        print(f"\n[Step 3: CPR 10.3(1)(b) - Standard Deadline]")
+        print(f"Filing Deadline:     {final_deadline.strftime('%A, %d %B %Y')}")
+
+    print("-" * 60)
+    print(f"DEEMED SERVICE DATE:  {deemed_date.strftime('%A, %d %B %Y')}")
+    print(f"FILING DEADLINE:      {final_deadline.strftime('%A, %d %B %Y')}")
+    print("-" * 60)
+    return deemed_date, final_deadline
+
+def calculate_cpr_deadline(date_str, time_str="12:00", jurisdiction='england-and-wales'):
     """
-    print(f"--- CPR DEADLINE CALCULATOR (Civil Procedure Rules) ---")
+    Calculates filing deadlines based on CPR.
+    """
+    provider = BankHolidayProvider(jurisdiction)
     
     try:
-        service_date = datetime.datetime.strptime(service_date_str, "%Y-%m-%d").date()
+        dt_str = f"{date_str} {time_str}"
+        sent_at = datetime.datetime.strptime(dt_str, "%Y-%m-%d %H:%M")
     except ValueError:
-        print("Error: Invalid date format. Please use YYYY-MM-DD (e.g., 2025-12-20)")
+        print("Error: Invalid format. Use YYYY-MM-DD and HH:MM")
         return
 
-    # CPR 10.3(1)(b) - 14 days
-    base_deadline = service_date + datetime.timedelta(days=14)
+    print(f"--- CPR LEGAL TOOLKIT: SERVICE & DEADLINES ---")
+    print(f"Jurisdiction: {jurisdiction.replace('-', ' ').title()}")
     
-    print(f"\n[Calculations]")
-    print(f"Service Date:       {service_date.strftime('%A, %d %B %Y')}")
-    print(f"Standard +14 Days:  {base_deadline.strftime('%A, %d %B %Y')}")
-    print(f"Legal Authority:    CPR Part 10.3(1)(b)")
-
-    # CPR 2.8(5) - Weekend/Closed Office check
-    final_deadline, adjusted = next_working_day(base_deadline)
-
-    if adjusted:
-        print(f"\n[Adjustment Applied]")
-        print(f"Condition:          Deadline fell on a weekend.")
-        print(f"Legal Authority:    CPR Part 2.8(5) 'Time expires on a day court office is closed'")
-        print(f"Adjustment:         Moved to next working day.")
-    
-    print("-" * 60)
-    print(f"OFFICIAL FILING DEADLINE: {final_deadline.strftime('%A, %d %B %Y')}")
-    print("-" * 60)
-    print("NOTE: This tool automatically adjusts for Weekends.")
-    print("      Please manually verify if the deadline falls on a UK Bank Holiday,")
-    print("      as CPR 2.8(5) also applies to those days.")
+    calculate_deemed_service(sent_at, provider)

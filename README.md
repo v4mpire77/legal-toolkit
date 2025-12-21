@@ -1,66 +1,56 @@
-# Legal Toolkit CLI
+# ⚖️ Legal Toolkit (v2.0) - Legal Engineering Edition
 
-A unified command-line interface for automating legal workflows and ensuring compliance with the Civil Procedure Rules (CPR) in England & Wales.
+A professional-grade Python suite for automating UK legal workflows. This project demonstrates **Legal Engineering**: the intersection of rigorous procedural law (Civil Procedure Rules) and advanced software architecture.
 
-## Overview
+## 🚀 Key Features
 
-This project combines legal domain expertise with software engineering to solve practical problems faced by paralegals and solicitors. It currently includes tools for:
+### 1. 🧠 Algorithmic Law: CPR Compliance
+The toolkit encodes complex procedural logic from the **Civil Procedure Rules (CPR)**:
+*   **Deemed Service (CPR 6.14 & 6.26)**: Calculates the exact date of service for Claim Forms, accounting for the **4:30 PM electronic cutoff** and the "second business day" rule.
+*   **Resilient Holiday Provider**: Integrates the **GOV.UK Bank Holiday API** with a cache-first, offline-ready architecture. It supports distinct rules for England & Wales, Scotland, and Northern Ireland.
+*   **Procedural Timeline**: Visualizes the gap between transmission and deemed service using interactive Gantt charts (via Plotly).
 
-1.  **Court Bundle Indexing**: Automates the creation of indices and checks for compliance with **CPR Practice Direction 5B** regarding email size limits.
-2.  **Deadline Calculation**: accurate computation of filing deadlines based on **CPR Part 10** and **CPR Part 2.8**.
+### 2. 📄 High-Performance Document Engineering
+Built on **PyMuPDF**, the toolkit automates the preparation of court-compliant electronic bundles (Practice Direction 5B):
+*   **Automated Bates Stamping**: Applies sequential, formatted numbering to the footer of thousands of pages in seconds.
+*   **Clickable TOC Generation**: Automatically creates a nested, navigable Table of Contents (Bookmarks) based on document structure.
+*   **Smart Merging**: Combines heterogeneous PDFs into a single litigation master file without losing metadata.
 
-## Features & Legal Basis
+### 3. 📊 Visual Dashboard (Streamlit)
+A modern, web-based interface for non-technical legal professionals ("fee earners"), featuring interactive visualizations and drag-and-drop bundle generation.
 
-### 1. Bundle Indexer (`bundle`)
-Generates a clean, formatted text index of all files in a directory and calculates total size.
+## 🛠️ Tech Stack
+*   **Language**: Python 3.12+
+*   **PDF Engine**: PyMuPDF (C-backed for speed)
+*   **UI Framework**: Streamlit
+*   **Data Viz**: Plotly Express, Pandas
+*   **API/Networking**: Requests (with Resilient Provider Pattern)
 
-*   **Legal Basis**:
-    *   **CPR PD 5B para 2.1(1)**: Limits total email size to **25MB** for general/High Court filings.
-    *   **CPR PD 5B para 2.1(2)**: Limits total email size to **10MB** for County Court filings.
-*   **Functionality**:
-    *   Detects file sizes.
-    *   Warns if the bundle exceeds the specific limit for the chosen court.
-    *   Generates an `INDEX.txt` ready for inclusion in correspondence.
+## 📦 Installation & Setup
 
-### 2. Deadline Calculator (`deadline`)
-Calculates the 14-day deadline for filing an Acknowledgment of Service or Defence.
+1. **Clone the repository**:
+   ```bash
+   git clone https://github.com/v4mpire77/legal-toolkit.git
+   cd legal-toolkit
+   ```
 
-*   **Legal Basis**:
-    *   **CPR 10.3(1)(b)**: The period for filing an acknowledgment of service is 14 days after service of the claim form.
-    *   **CPR 2.8(5)**: If a deadline ends on a day the court office is closed (Saturday, Sunday, or Bank Holiday), the act is done in time if done on the next day the court office is open.
-*   **Functionality**:
-    *   Takes a Service Date.
-    *   Adds 14 days.
-    *   Automatically adjusts for weekends (Next Working Day rule).
+2. **Set up Virtual Environment**:
+   ```bash
+   python3 -m venv .venv
+   source .venv/bin/activate
+   pip install -r requirements.txt
+   ```
 
-## Usage
+3. **Run the Dashboard**:
+   ```bash
+   streamlit run app.py
+   ```
 
-### Prerequisites
-*   Python 3.x
+4. **Run via CLI**:
+   ```bash
+   python3 -m legal_toolkit.main deadline --date 2024-12-20 --time 17:00
+   ```
 
-### Installation
-Clone the repository:
-```bash
-git clone https://github.com/yourusername/legal-toolkit.git
-cd legal-toolkit
-```
+## ⚖️ Legal Disclaimer
+This software is for educational and professional assistance only and does not constitute legal advice. While it implements CPR rules (including the 4:30 PM cutoff), always cross-reference with official [Justice.gov.uk](https://www.justice.gov.uk) documentation.
 
-### Commands
-
-**1. Calculate a Deadline**
-```bash
-python -m legal_toolkit.main deadline --date 2025-12-20
-```
-
-**2. Index a Bundle (General/High Court - 25MB)**
-```bash
-python -m legal_toolkit.main bundle --path ./my_case_documents
-```
-
-**3. Index a Bundle (County Court - 10MB)**
-```bash
-python -m legal_toolkit.main bundle --path ./county_court_docs --court county
-```
-
-## Disclaimer
-This software is designed to assist legal professionals but does not constitute legal advice. While efforts are made to ensure accuracy with current Civil Procedure Rules (as of 2025), users should always verify deadlines and compliance requirements against the official [Justice.gov.uk](https://www.justice.gov.uk/courts/procedure-rules/civil) rules, particularly regarding Bank Holidays which are not currently automated.

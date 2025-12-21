@@ -21,15 +21,18 @@ def main():
                                help="Target court for size limits (general=25MB, county=10MB)")
 
     # Subcommand: deadline
-    parser_deadline = subparsers.add_parser("deadline", help="Calculate filing deadlines (CPR 10.3 & 2.8)")
-    parser_deadline.add_argument("--date", type=str, required=True, help="Date of Service (YYYY-MM-DD)")
+    parser_deadline = subparsers.add_parser("deadline", help="Calculate filing deadlines (CPR 6.14, 6.26, 10.3 & 2.8)")
+    parser_deadline.add_argument("--date", type=str, required=True, help="Date of Transmission (YYYY-MM-DD)")
+    parser_deadline.add_argument("--time", type=str, default="12:00", help="Time of Transmission (HH:MM, default 12:00)")
+    parser_deadline.add_argument("--jurisdiction", type=str, choices=['england-and-wales', 'scotland', 'northern-ireland'], 
+                                 default='england-and-wales', help="Jurisdiction for bank holidays")
 
     args = parser.parse_args()
 
     if args.command == "bundle":
         generate_bundle_index(args.path, args.court)
     elif args.command == "deadline":
-        calculate_cpr_deadline(args.date)
+        calculate_cpr_deadline(args.date, args.time, args.jurisdiction)
     else:
         parser.print_help()
 
