@@ -84,8 +84,35 @@ with tabs[2]:
     st.header("Local AI Document Assistant")
     st.info("This feature uses a Local LLM (Ollama) to ensure client confidentiality remains on-device.")
     
+    # Import here to avoid circular dependencies/errors if not set up
+    from legal_toolkit.ai_assistant import AIAssistant
+    ai = AIAssistant(model_name="llama3")
+    
+    status_col, _ = st.columns([1, 3])
+    with status_col:
+        if ai.is_available():
+            st.success("🟢 Ollama is Online")
+        else:
+            st.error("🔴 Ollama Offline")
+            st.caption("Run `ollama serve` in a terminal.")
+
     uploaded_file = st.file_uploader("Upload a document for analysis", type=['pdf'])
-    if uploaded_file:
-        st.write("Document received. (AI Analysis requires Ollama running locally).")
-        st.button("Summarize Particulars of Claim")
-        st.button("Extract Key Dates")
+    
+    if uploaded_file and ai.is_available():
+        # Read file into bytes once
+        file_bytes = uploaded_file.read()
+        
+        col1, col2 = st.columns(2)
+        with col1:
+            if st.button("Summarize Particulars of Claim"):
+                with st.spinner("Analyzing document..."):
+                    summary = ai.summarize_document(file_bytes, "summary")
+                    st.markdown("### 📝 Case Summary")
+                    st.write(summary)
+        
+        with col2:
+            if st.button("Extract Key Dates"):
+                with st.spinner("Scanning for dates..."):
+                    dates = ai.summarize_document(file_bytes, "dates")
+                    st.markdown("### 📅 Critical Dates")
+                    st.write(dates)
