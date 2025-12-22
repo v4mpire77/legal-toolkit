@@ -49,12 +49,15 @@ class AIAssistant:
             "summary": (
                 "You are a senior UK legal assistant. Summarize the following legal document. "
                 "Identify the Parties, the Core Claim/Dispute, and the Relief Sought. "
+                "STRICT GROUNDING: Use ONLY the provided text. If specific information (like the relief sought) "
+                "is not explicitly stated in the text, write 'Not Specified'. Do not hallucinate or assume facts. "
                 "Keep it professional and concise.\n\n"
             ),
             "dates": (
                 "You are a UK legal assistant. Extract all critical procedural dates from the text below. "
-                "List them in a table format: Date | Event | Legal Significance. "
-                "If no year is specified, infer from context if possible or mark as 'Unknown'.\n\n"
+                "STRICT GROUNDING: Use ONLY the provided text. If a date or its significance is not explicitly "
+                "mentioned, do not invent it. List them in a table format: Date | Event | Legal Significance. "
+                "If no year is specified, infer from context only if certain, otherwise mark as 'Unknown'.\n\n"
             )
         }
 

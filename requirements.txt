@@ -4,3 +4,5 @@ pandas
 streamlit
 plotly
 dateparser
+pytest
+ollama

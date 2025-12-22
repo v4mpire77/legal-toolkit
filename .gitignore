@@ -8,3 +8,6 @@ env/
 venv/
 legacy/
 INDEX.txt
+
+.gemini/
+gha-creds-*.json

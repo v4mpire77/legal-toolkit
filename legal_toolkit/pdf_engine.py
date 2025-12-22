@@ -76,5 +76,9 @@ class PDFEngine:
         files = [os.path.join(source_dir, f) for f in os.listdir(source_dir) if f.lower().endswith('.pdf')]
         files.sort()
         
+        # Security: Prevent Path Traversal
         output_path = os.path.join(source_dir, output_name)
+        if not os.path.abspath(output_path).startswith(os.path.abspath(source_dir)):
+             raise ValueError("Security Violation: Output filename attempts to escape the directory.")
+             
         return self.merge_pdfs(files, output_path, bates_prefix)
