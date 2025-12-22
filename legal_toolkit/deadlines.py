@@ -11,6 +11,7 @@ Legal Basis:
 
 import datetime
 from .holidays import BankHolidayProvider
+from .utils import parse_date
 
 def calculate_deemed_service(sent_at: datetime.datetime, provider: BankHolidayProvider):
     """
@@ -69,14 +70,27 @@ def calculate_deemed_service(sent_at: datetime.datetime, provider: BankHolidayPr
 def calculate_cpr_deadline(date_str, time_str="12:00", jurisdiction='england-and-wales'):
     """
     Calculates filing deadlines based on CPR.
+    
+    Args:
+        date_str (str): Date of transmission. Can be in strict format (YYYY-MM-DD) 
+                       or natural language (e.g., "next Friday", "tomorrow", "25 Dec 2024").
+        time_str (str): Time of transmission in HH:MM format (default: "12:00").
+        jurisdiction (str): Jurisdiction for bank holidays.
     """
     provider = BankHolidayProvider(jurisdiction)
     
     try:
-        dt_str = f"{date_str} {time_str}"
-        sent_at = datetime.datetime.strptime(dt_str, "%Y-%m-%d %H:%M")
-    except ValueError:
-        print("Error: Invalid format. Use YYYY-MM-DD and HH:MM")
+        # Use the new parse_date helper for flexible date parsing
+        date_obj = parse_date(date_str)
+        
+        # Parse time separately
+        time_obj = datetime.datetime.strptime(time_str, "%H:%M").time()
+        
+        # Combine date and time
+        sent_at = datetime.datetime.combine(date_obj, time_obj)
+    except ValueError as e:
+        print(f"Error: {str(e)}")
+        print("Please use a valid date format (e.g., 'YYYY-MM-DD', 'tomorrow', 'Friday')")
         return
 
     print(f"--- CPR LEGAL TOOLKIT: SERVICE & DEADLINES ---")
