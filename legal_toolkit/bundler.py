@@ -11,7 +11,11 @@ Legal Basis:
 
 import os
 import datetime
+from rich.console import Console
+from rich.table import Table
 from .utils import format_bytes
+
+console = Console()
 
 def generate_bundle_index(directory, court_type='general'):
     """
@@ -22,7 +26,7 @@ def generate_bundle_index(directory, court_type='general'):
         court_type (str): 'general' (25MB limit) or 'county' (10MB limit).
     """
     if not os.path.exists(directory):
-        print(f"Error: Directory '{directory}' does not exist.")
+        console.print(f"[bold red]Error:[/bold red] Directory '{directory}' does not exist.")
         return
 
     # Define limits based on PD 5B
@@ -51,6 +55,12 @@ def generate_bundle_index(directory, court_type='general'):
     output_lines.append(f"{'#':<3} | {'File Name':<45} | {'Size':<10}")
     output_lines.append("-" * 70)
     
+    # Create rich table for display
+    table = Table(title="[bold]Court Bundle Index[/bold]", show_header=True, header_style="bold magenta")
+    table.add_column("#", style="cyan", width=5)
+    table.add_column("File Name", style="white", width=45)
+    table.add_column("Size", style="yellow", width=12)
+    
     total_size = 0
     
     for idx, filename in enumerate(files, start=1):
@@ -61,6 +71,7 @@ def generate_bundle_index(directory, court_type='general'):
             
             readable_size = format_bytes(file_size)
             output_lines.append(f"{idx:<3} | {filename:<45} | {readable_size:<10}")
+            table.add_row(str(idx), filename, readable_size)
     
     output_lines.append("-" * 70)
     output_lines.append(f"TOTAL FILES: {len(files)}")
@@ -80,5 +91,24 @@ def generate_bundle_index(directory, court_type='general'):
     with open(output_path, 'w') as f:
         f.write('\n'.join(output_lines))
     
-    print('\n'.join(output_lines))
-    print(f"\nIndex saved to: {output_path}")
+    # Display with rich
+    console.print(f"\n[bold]COURT BUNDLE INDEX (v2.0)[/bold]")
+    console.print(f"Target Court: [cyan]{limit_name}[/cyan]")
+    console.print(f"Generated on: [yellow]{datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')}[/yellow]\n")
+    
+    console.print(table)
+    
+    console.print(f"\n[bold]Summary:[/bold]")
+    console.print(f"Total Files: [cyan]{len(files)}[/cyan]")
+    console.print(f"Total Bundle Size: [yellow]{format_bytes(total_size)}[/yellow]")
+    
+    # Compliance Check (CPR PD 5B)
+    console.print(f"\n[bold]Compliance Check (CPR PD 5B):[/bold]")
+    if total_size > limit:
+        console.print(f"[bold red]!!! WARNING: Bundle exceeds {limit_name} email limit !!![/bold red]")
+        console.print(f"    Legal Basis: CPR Practice Direction 5B para 2.1")
+        console.print(f"    Action Required: Split bundle or use alternative transfer method.")
+    else:
+        console.print(f"[bold green]✓ Bundle is within {limit_name} email limit.[/bold green]")
+    
+    console.print(f"\n[dim]Index saved to: {output_path}[/dim]")
