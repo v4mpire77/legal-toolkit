@@ -22,7 +22,7 @@ def main():
 
     # Subcommand: deadline
     parser_deadline = subparsers.add_parser("deadline", help="Calculate filing deadlines (CPR 6.14, 6.26, 10.3 & 2.8)")
-    parser_deadline.add_argument("--date", type=str, required=True, help="Date of Transmission (YYYY-MM-DD)")
+    parser_deadline.add_argument("--date", type=str, required=True, help="Date of Transmission (e.g., 'YYYY-MM-DD', 'tomorrow', 'Friday', '25 Dec 2024')")
     parser_deadline.add_argument("--time", type=str, default="12:00", help="Time of Transmission (HH:MM, default 12:00)")
     parser_deadline.add_argument("--jurisdiction", type=str, choices=['england-and-wales', 'scotland', 'northern-ireland'], 
                                  default='england-and-wales', help="Jurisdiction for bank holidays")

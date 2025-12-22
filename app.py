@@ -31,10 +31,24 @@ tabs = st.tabs(["📅 Deadline Calculator", "📁 Bundle Indexer & PDF", "🤖 A
 # --- TAB 1: DEADLINE CALCULATOR ---
 with tabs[0]:
     st.header("CPR Deadline Calculator")
+    st.markdown("💡 **Tip**: You can enter dates like 'tomorrow', 'Friday', or '25 Dec 2024'")
     col1, col2 = st.columns(2)
     
     with col1:
-        date_input = st.date_input("Date of Transmission", datetime.date.today())
+        # Add a text input option for natural language dates
+        use_natural_language = st.checkbox("Use natural language date input", value=False)
+        
+        if use_natural_language:
+            from legal_toolkit.utils import parse_date
+            date_text = st.text_input("Date of Transmission (e.g., 'tomorrow', 'next Friday')", value="today")
+            try:
+                date_input = parse_date(date_text)
+            except ValueError as e:
+                st.error(f"Could not parse date: {e}")
+                date_input = datetime.date.today()
+        else:
+            date_input = st.date_input("Date of Transmission", datetime.date.today())
+        
         time_input = st.time_input("Time of Transmission", datetime.time(12, 0))
         
         sent_at = datetime.datetime.combine(date_input, time_input)
