@@ -36,14 +36,16 @@ class AIAssistant:
         
         Returns:
             A string containing all extracted tables in CSV format, separated by newlines.
-            Returns empty string if no tables are found.
+            Returns empty string if no tables are found or if an error occurs.
         """
-        # Save bytes to temporary file since pdfplumber requires a file path
-        with tempfile.NamedTemporaryFile(delete=False, suffix='.pdf') as tmp_file:
-            tmp_file.write(pdf_bytes)
-            tmp_path = tmp_file.name
+        tmp_path = None
         
         try:
+            # Save bytes to temporary file since pdfplumber requires a file path
+            with tempfile.NamedTemporaryFile(delete=False, suffix='.pdf', mode='wb') as tmp_file:
+                tmp_file.write(pdf_bytes)
+                tmp_path = tmp_file.name
+            
             tables = extract_tables(tmp_path)
             
             if not tables:
@@ -57,10 +59,17 @@ class AIAssistant:
                 table_text += "\n"
             
             return table_text
+        except Exception:
+            # If table extraction fails, return empty string to allow text-only analysis
+            return ""
         finally:
             # Clean up temporary file
-            if os.path.exists(tmp_path):
-                os.unlink(tmp_path)
+            if tmp_path and os.path.exists(tmp_path):
+                try:
+                    os.unlink(tmp_path)
+                except Exception:
+                    # Ignore errors during cleanup
+                    pass
 
     def summarize_document(self, pdf_bytes, prompt_type: str = "summary") -> str:
         """
