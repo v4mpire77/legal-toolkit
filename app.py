@@ -11,6 +11,7 @@ import os
 from legal_toolkit.holidays import BankHolidayProvider
 from legal_toolkit.deadlines import calculate_deemed_service
 from legal_toolkit.pdf_engine import PDFEngine
+from legal_toolkit.utils import parse_date
 
 st.set_page_config(page_title="Legal Toolkit CLI/GUI", layout="wide")
 
@@ -39,8 +40,7 @@ with tabs[0]:
         use_natural_language = st.checkbox("Use natural language date input", value=False)
         
         if use_natural_language:
-            from legal_toolkit.utils import parse_date
-            date_text = st.text_input("Date of Transmission (e.g., 'tomorrow', 'next Friday')", value="today")
+            date_text = st.text_input("Date of Transmission (e.g., 'tomorrow', 'Friday')", value="today")
             try:
                 date_input = parse_date(date_text)
             except ValueError as e:

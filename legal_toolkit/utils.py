@@ -29,12 +29,12 @@ def parse_date(input_str):
         >>> parse_date("tomorrow")
         # Returns tomorrow's date
     """
-    if not input_str or not isinstance(input_str, str):
+    if not input_str or not isinstance(input_str, str) or not input_str.strip():
         raise ValueError("Input must be a non-empty string")
     
     # Try parsing with dateparser
     parsed_datetime = dateparser.parse(
-        input_str,
+        input_str.strip(),
         settings={
             'PREFER_DATES_FROM': 'future',
             'STRICT_PARSING': False,

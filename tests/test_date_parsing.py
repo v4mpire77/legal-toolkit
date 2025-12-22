@@ -54,6 +54,11 @@ class TestDateParsing(unittest.TestCase):
         with self.assertRaises(ValueError):
             parse_date("")
     
+    def test_whitespace_only_raises_error(self):
+        """Test that whitespace-only string raises ValueError."""
+        with self.assertRaises(ValueError):
+            parse_date("   ")
+    
     def test_none_raises_error(self):
         """Test that None raises ValueError."""
         with self.assertRaises(ValueError):

@@ -90,7 +90,7 @@ def calculate_cpr_deadline(date_str, time_str="12:00", jurisdiction='england-and
         sent_at = datetime.datetime.combine(date_obj, time_obj)
     except ValueError as e:
         print(f"Error: {str(e)}")
-        print("Please use a valid date format (e.g., 'YYYY-MM-DD', 'tomorrow', 'next Friday')")
+        print("Please use a valid date format (e.g., 'YYYY-MM-DD', 'tomorrow', 'Friday')")
         return
 
     print(f"--- CPR LEGAL TOOLKIT: SERVICE & DEADLINES ---")
