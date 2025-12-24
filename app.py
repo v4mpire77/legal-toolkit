@@ -12,6 +12,7 @@ from legal_toolkit.holidays import BankHolidayProvider
 from legal_toolkit.deadlines import calculate_deemed_service
 from legal_toolkit.pdf_engine import PDFEngine
 from legal_toolkit.utils import parse_date
+from legal_toolkit.fees import calculate_issue_fee
 
 st.set_page_config(page_title="Legal Toolkit CLI/GUI", layout="wide")
 
@@ -27,7 +28,7 @@ jurisdiction = st.sidebar.selectbox(
 )
 provider = BankHolidayProvider(jurisdiction)
 
-tabs = st.tabs(["📅 Deadline Calculator", "📁 Bundle Indexer & PDF", "🤖 AI Assistant (Beta)"])
+tabs = st.tabs(["📅 Deadline Calculator", "📁 Bundle Indexer & PDF", "🤖 AI Assistant (Beta)", "💰 Fee Calculator"])
 
 # --- TAB 1: DEADLINE CALCULATOR ---
 with tabs[0]:
@@ -137,3 +138,35 @@ with tabs[2]:
                         dates = ai.summarize_document(file_bytes, "dates")
                         st.markdown("### 📅 Critical Dates")
                         st.write(dates)
+
+# --- TAB 4: FEE CALCULATOR ---
+with tabs[3]:
+    st.header("Court Issue Fee Calculator")
+    st.markdown("Calculates the issue fee for Money Claims (Form EX50).")
+    
+    col1, col2 = st.columns(2)
+    
+    with col1:
+        claim_value = st.number_input(
+            "Value of your Claim (£)", 
+            min_value=0.0, 
+            step=100.0, 
+            format="%.2f"
+        )
+        
+        if st.button("Calculate Fee"):
+            fee = calculate_issue_fee(claim_value)
+            st.metric(label="Court Fee to Pay", value=fee)
+            
+    with col2:
+        st.info(
+            """
+            **Fee Brackets (simplified):**
+            * Up to £300: **£35**
+            * £300 - £500: **£50**
+            * £5k - £10k: **£455**
+            * Over £10k: **5% of claim**
+            * Over £200k: **£10,000 (Cap)**
+            """
+        )
+
