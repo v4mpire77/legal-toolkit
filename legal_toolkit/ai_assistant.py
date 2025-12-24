@@ -3,9 +3,11 @@ Module: AI Assistant
 Description: Interface for Local LLM (Ollama) to perform privacy-first document analysis.
 """
 
-import ollama
 import fitz  # PyMuPDF
+import tempfile
+import os
 from typing import Optional
+from .tables import extract_tables
 
 class AIAssistant:
     def __init__(self, model_name: str = "llama3"):
@@ -14,9 +16,15 @@ class AIAssistant:
     def is_available(self) -> bool:
         """Checks if Ollama is running and accessible."""
         try:
+            # Lazy import: Only fails if we actually try to check availability
+            import ollama
             ollama.list()
             return True
+        except ImportError:
+            # The library isn't even installed (e.g., on Cloud)
+            return False
         except Exception:
+            # Library is installed, but the service (daemon) isn't running
             return False
 
     def extract_text_from_pdf(self, pdf_bytes) -> str:
@@ -27,6 +35,47 @@ class AIAssistant:
             text += page.get_text()
         return text
 
+    def extract_tables_from_pdf(self, pdf_bytes) -> str:
+        """
+        Extracts tables from a PDF file stream and returns them as CSV-formatted strings.
+        
+        Returns:
+            A string containing all extracted tables in CSV format, separated by newlines.
+            Returns empty string if no tables are found or if an error occurs.
+        """
+        tmp_path = None
+        
+        try:
+            # Save bytes to temporary file since pdfplumber requires a file path
+            with tempfile.NamedTemporaryFile(delete=False, suffix='.pdf', mode='wb') as tmp_file:
+                tmp_file.write(pdf_bytes)
+                tmp_path = tmp_file.name
+            
+            tables = extract_tables(tmp_path)
+            
+            if not tables:
+                return ""
+            
+            # Convert tables to CSV format
+            table_text = "\n\n=== STRUCTURED TABLES ===\n\n"
+            for i, df in enumerate(tables, 1):
+                table_text += f"--- Table {i} ---"
+                table_text += df.to_csv(index=False)
+                table_text += "\n"
+            
+            return table_text
+        except Exception:
+            # If table extraction fails, return empty string to allow text-only analysis
+            return ""
+        finally:
+            # Clean up temporary file
+            if tmp_path and os.path.exists(tmp_path):
+                try:
+                    os.unlink(tmp_path)
+                except Exception:
+                    # Ignore errors during cleanup
+                    pass
+
     def summarize_document(self, pdf_bytes, prompt_type: str = "summary") -> str:
         """
         Sends document text to the local LLM for analysis.
@@ -36,14 +85,25 @@ class AIAssistant:
             prompt_type: 'summary' or 'dates'.
         """
         if not self.is_available():
-            return "Error: Ollama is not running. Please launch Ollama to use AI features."
+            return "Error: Ollama is not running or not installed. Please launch Ollama to use AI features."
+
+        # We must import here too, for when the function is actually called
+        import ollama
 
         text = self.extract_text_from_pdf(pdf_bytes)
         
+        # Extract tables and add to context
+        table_text = self.extract_tables_from_pdf(pdf_bytes)
+        
+        # Combine text and tables
+        full_text = text
+        if table_text:
+            full_text += "\n\n" + table_text
+        
         # Truncate text if too long (basic handling for context window)
         # 1 token ~= 4 chars. 8k context ~= 32k chars.
-        if len(text) > 30000:
-            text = text[:30000] + "\n[...Truncated due to context limit...]"
+        if len(full_text) > 30000:
+            full_text = full_text[:30000] + "\n[...Truncated due to context limit...]"
 
         prompts = {
             "summary": (
@@ -51,6 +111,7 @@ class AIAssistant:
                 "Identify the Parties, the Core Claim/Dispute, and the Relief Sought. "
                 "STRICT GROUNDING: Use ONLY the provided text. If specific information (like the relief sought) "
                 "is not explicitly stated in the text, write 'Not Specified'. Do not hallucinate or assume facts. "
+                "If structured tables are present, incorporate key financial or procedural information from them. "
                 "Keep it professional and concise.\n\n"
             ),
             "dates": (
@@ -66,9 +127,8 @@ class AIAssistant:
         try:
             response = ollama.chat(model=self.model, messages=[
                 {'role': 'system', 'content': system_prompt},
-                {'role': 'user', 'content': f"Document Text:\n{text}"},
+                {'role': 'user', 'content': f"Document Text:\n{full_text}"},
             ])
             return response['message']['content']
         except Exception as e:
             return f"AI Error: {str(e)}"
-

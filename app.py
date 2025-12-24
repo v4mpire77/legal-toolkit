@@ -96,37 +96,44 @@ with tabs[1]:
 # --- TAB 3: AI ASSISTANT ---
 with tabs[2]:
     st.header("Local AI Document Assistant")
-    st.info("This feature uses a Local LLM (Ollama) to ensure client confidentiality remains on-device.")
     
-    # Import here to avoid circular dependencies/errors if not set up
-    from legal_toolkit.ai_assistant import AIAssistant
-    ai = AIAssistant(model_name="llama3")
-    
-    status_col, _ = st.columns([1, 3])
-    with status_col:
-        if ai.is_available():
-            st.success("🟢 Ollama is Online")
-        else:
-            st.error("🔴 Ollama Offline")
-            st.caption("Run `ollama serve` in a terminal.")
+    # Check environment variable to see if we are in Cloud Mode
+    is_cloud = os.environ.get('STREAMLIT_RUNTIME') == 'cloud'
 
-    uploaded_file = st.file_uploader("Upload a document for analysis", type=['pdf'])
-    
-    if uploaded_file and ai.is_available():
-        # Read file into bytes once
-        file_bytes = uploaded_file.read()
+    if is_cloud:
+        st.info("☁️ **Web Demo Mode**: Local AI features are disabled to protect server resources.")
+        st.warning("To use the AI features (Llama3), please clone this repository and run it locally.")
+    else:
+        st.info("This feature uses a Local LLM (Ollama) to ensure client confidentiality remains on-device.")
         
-        col1, col2 = st.columns(2)
-        with col1:
-            if st.button("Summarize Particulars of Claim"):
-                with st.spinner("Analyzing document..."):
-                    summary = ai.summarize_document(file_bytes, "summary")
-                    st.markdown("### 📝 Case Summary")
-                    st.write(summary)
+        # Import here to avoid circular dependencies
+        from legal_toolkit.ai_assistant import AIAssistant
+        ai = AIAssistant(model_name="llama3")
         
-        with col2:
-            if st.button("Extract Key Dates"):
-                with st.spinner("Scanning for dates..."):
-                    dates = ai.summarize_document(file_bytes, "dates")
-                    st.markdown("### 📅 Critical Dates")
-                    st.write(dates)
+        status_col, _ = st.columns([1, 3])
+        with status_col:
+            if ai.is_available():
+                st.success("🟢 Ollama is Online")
+            else:
+                st.error("🔴 Ollama Offline")
+                st.caption("Run `ollama serve` in a terminal.")
+
+        uploaded_file = st.file_uploader("Upload a document for analysis", type=['pdf'])
+        
+        if uploaded_file and ai.is_available():
+            file_bytes = uploaded_file.read()
+            
+            col1, col2 = st.columns(2)
+            with col1:
+                if st.button("Summarize Particulars of Claim"):
+                    with st.spinner("Analyzing document..."):
+                        summary = ai.summarize_document(file_bytes, "summary")
+                        st.markdown("### 📝 Case Summary")
+                        st.write(summary)
+            
+            with col2:
+                if st.button("Extract Key Dates"):
+                    with st.spinner("Scanning for dates..."):
+                        dates = ai.summarize_document(file_bytes, "dates")
+                        st.markdown("### 📅 Critical Dates")
+                        st.write(dates)

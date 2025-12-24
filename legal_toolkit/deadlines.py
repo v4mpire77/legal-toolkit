@@ -11,12 +11,16 @@ Legal Basis:
 
 import datetime
 import logging
+from rich.console import Console
+from rich.table import Table
 from .holidays import BankHolidayProvider
 from .utils import parse_date
 
 # Configure logger
 logger = logging.getLogger(__name__)
 logging.basicConfig(level=logging.INFO)
+
+console = Console()
 
 def calculate_deemed_service(sent_at: datetime.datetime, provider: BankHolidayProvider):
     """
@@ -32,26 +36,26 @@ def calculate_deemed_service(sent_at: datetime.datetime, provider: BankHolidayPr
     is_business = provider.is_business_day(sent_date)
     is_late = sent_at.time() > cutoff_time
     
-    logger.info(f"[Step 1: CPR 6.26 - Effective Step]")
-    logger.info(f"Actual Transmission: {sent_at.strftime('%Y-%m-%d %H:%M')}")
+    console.print("\n[bold cyan][Step 1: CPR 6.26 - Effective Step][/bold cyan]")
+    console.print(f"Actual Transmission: [yellow]{sent_at.strftime('%Y-%m-%d %H:%M')}[/yellow]")
     
     if not is_business or is_late:
         reason = "Non-business day" if not is_business else "After 16:30 cutoff"
         effective_date = provider.next_business_day(sent_date)
-        logger.info(f"Adjustment:          Sent {reason}. Effective date moved to next business day.")
+        console.print(f"Adjustment:          Sent {reason}. Effective date moved to next business day.")
     else:
         effective_date = sent_date
-        logger.info(f"Adjustment:          None (Sent before 16:30 on a business day).")
+        console.print(f"Adjustment:          None (Sent before 16:30 on a business day).")
     
-    logger.info(f"Effective Step Date: {effective_date.strftime('%A, %d %B %Y')}")
+    console.print(f"Effective Step Date: [green]{effective_date.strftime('%A, %d %B %Y')}[/green]")
 
     # 2. Calculate Deemed Service (CPR 6.14)
     # Deemed served on the SECOND business day after the effective step
     deemed_date = provider.add_business_days(effective_date, 2)
     
-    logger.info(f"[Step 2: CPR 6.14 - Deeming Provision]")
-    logger.info(f"Rule:                Second business day after effective step.")
-    logger.info(f"Legal Authority:     CPR Part 6.14")
+    console.print(f"\n[bold cyan][Step 2: CPR 6.14 - Deeming Provision][/bold cyan]")
+    console.print(f"Rule:                Second business day after effective step.")
+    console.print(f"Legal Authority:     CPR Part 6.14")
     
     # 3. Calculate Filing Deadline (AOS/Defence - 14 Days)
     # CPR 10.3(1)(b)
@@ -59,28 +63,30 @@ def calculate_deemed_service(sent_at: datetime.datetime, provider: BankHolidayPr
     final_deadline = base_deadline
     if not provider.is_business_day(base_deadline):
         final_deadline = provider.next_business_day(base_deadline)
-        logger.info(f"[Step 3: CPR 2.8(5) - Deadline Adjustment]")
-        logger.info(f"Condition:           14-day deadline fell on a weekend/holiday.")
-        logger.info(f"Filing Deadline:     Moved to {final_deadline.strftime('%A, %d %B %Y')}")
+        console.print(f"\n[bold cyan][Step 3: CPR 2.8(5) - Deadline Adjustment][/bold cyan]")
+        console.print(f"Condition:           14-day deadline fell on a weekend/holiday.")
+        console.print(f"Filing Deadline:     Moved to [green]{final_deadline.strftime('%A, %d %B %Y')}[/green]")
     else:
-        logger.info(f"[Step 3: CPR 10.3(1)(b) - Standard Deadline]")
-        logger.info(f"Filing Deadline:     {final_deadline.strftime('%A, %d %B %Y')}")
+        console.print(f"\n[bold cyan][Step 3: CPR 10.3(1)(b) - Standard Deadline][/bold cyan]")
+        console.print(f"Filing Deadline:     [green]{final_deadline.strftime('%A, %d %B %Y')}[/green]")
 
-    logger.info("-" * 60)
-    logger.info(f"DEEMED SERVICE DATE:  {deemed_date.strftime('%A, %d %B %Y')}")
-    logger.info(f"FILING DEADLINE:      {final_deadline.strftime('%A, %d %B %Y')}")
-    logger.info("-" * 60)
+    # Create results table
+    table = Table(title="[bold]Deadline Results[/bold]", show_header=True, header_style="bold magenta")
+    table.add_column("Event", style="cyan", width=30)
+    table.add_column("Date", style="green", width=30)
+    
+    table.add_row("Deemed Service Date", deemed_date.strftime('%A, %d %B %Y'))
+    table.add_row("Filing Deadline", final_deadline.strftime('%A, %d %B %Y'))
+    
+    console.print()
+    console.print(table)
+    
     return deemed_date, final_deadline
 
 def calculate_cpr_deadline(date_str, time_str="12:00", jurisdiction='england-and-wales'):
     """
     Calculates filing deadlines based on CPR.
-    
-    Args:
-        date_str (str): Date of transmission. Can be in strict format (YYYY-MM-DD) 
-                       or natural language (e.g., "next Friday", "tomorrow", "25 Dec 2024").
-        time_str (str): Time of transmission in HH:MM format (default: "12:00").
-        jurisdiction (str): Jurisdiction for bank holidays.
+    Returns a dictionary of dates instead of printing them.
     """
     provider = BankHolidayProvider(jurisdiction)
     
@@ -94,11 +100,15 @@ def calculate_cpr_deadline(date_str, time_str="12:00", jurisdiction='england-and
         # Combine date and time
         sent_at = datetime.datetime.combine(date_obj, time_obj)
     except ValueError as e:
-        logger.error(f"Error: {str(e)}")
-        logger.info("Please use a valid date format (e.g., 'YYYY-MM-DD', 'tomorrow', 'Friday')")
-        return
+        return {"error": str(e)}
 
-    logger.info(f"--- CPR LEGAL TOOLKIT: SERVICE & DEADLINES ---")
-    logger.info(f"Jurisdiction: {jurisdiction.replace('-', ' ').title()}")
-    
-    calculate_deemed_service(sent_at, provider)
+    # Calculate the dates (this function already returns the date objects)
+    deemed_date, final_deadline = calculate_deemed_service(sent_at, provider)
+
+    # RETURN the data in a structure we can test and use in the GUI
+    return {
+        "jurisdiction": jurisdiction,
+        "sent_at": sent_at,
+        "deemed_service": deemed_date,
+        "filing_deadline": final_deadline
+    }

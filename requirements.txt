@@ -6,3 +6,5 @@ plotly
 dateparser
 pytest
 ollama
+pdfplumber
+rich

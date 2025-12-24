@@ -32,7 +32,22 @@ def main():
     if args.command == "bundle":
         generate_bundle_index(args.path, args.court)
     elif args.command == "deadline":
-        calculate_cpr_deadline(args.date, args.time, args.jurisdiction)
+        # Capture the returned dictionary
+        result = calculate_cpr_deadline(args.date, args.time, args.jurisdiction)
+        
+        # Check for errors in the logic
+        if "error" in result:
+            print(f"❌ Error: {result['error']}")
+            sys.exit(1)
+        else:
+            # Print a clean summary using the data we got back
+            print("\n" + "="*40)
+            print(f"⚖️  CPR DEADLINE CALCULATOR")
+            print("="*40)
+            print(f"📅 Date Sent:       {result['sent_at']}")
+            print(f"🚀 Deemed Service:  {result['deemed_service']}")
+            print(f"🛑 Filing Deadline: {result['filing_deadline']}")
+            print("="*40 + "\n")
     else:
         parser.print_help()
 
