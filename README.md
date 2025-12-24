@@ -1,76 +1,71 @@
-# ⚖️ Legal Toolkit (v3.0) - Legal Engineering Edition
+# ⚖️ Legal Tech Compliance Dashboard
 
-[![Python 3.12](https://img.shields.io/badge/python-3.12-blue.svg)](https://www.python.org/downloads/release/python-3120/)
-[![Streamlit](https://img.shields.io/badge/Streamlit-App-FF4B4B?logo=streamlit&logoColor=white)](https://share.streamlit.io/)
+![Python](https://img.shields.io/badge/Python-3.12%2B-blue)
+![Streamlit](https://img.shields.io/badge/Streamlit-Deployed-FF4B4B)
+![Status](https://img.shields.io/badge/Maintenance-Active-green)
+![Tests](https://img.shields.io/badge/Tests-Passing-brightgreen)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
-[![Code Style: Black](https://img.shields.io/badge/code%20style-black-000000.svg)](https://github.com/psf/black)
 
-A professional-grade Python suite for automating UK legal workflows. This project demonstrates **Legal Engineering**: the intersection of rigorous procedural law (Civil Procedure Rules) and advanced software architecture.
+A modular Legal Technology toolkit designed to automate **Civil Procedure Rules (CPR)** compliance, document bundling, and court fee calculations. 
 
-## 🚀 Key Features
+A professional-grade Python suite demonstrating **Legal Engineering**: the intersection of rigorous procedural law and advanced software architecture.
 
-### 1. 🧠 Algorithmic Law: CPR Compliance
-The toolkit encodes complex procedural logic from the **Civil Procedure Rules (CPR)**:
-*   **Deemed Service (CPR 6.14 & 6.26)**: Calculates the exact date of service for Claim Forms, accounting for the **4:30 PM electronic cutoff** and the "second business day" rule.
-*   **Natural Language Input**: Parse dates like "tomorrow", "next Friday", or "25 Dec 2025" automatically.
-*   **Resilient Holiday Provider**: Integrates the **GOV.UK Bank Holiday API** with a cache-first, offline-ready architecture.
+## 🌟 Key Features
+
+### 1. 📅 Procedural Deadline Engine
+- **CPR 6.14 & 6.26 Logic:** Automatically calculates "Deemed Service" dates, accounting for the 4:30 PM rule and weekends.
+- **Natural Language Aware:** Automatically parse dates like "tomorrow", "next Friday", or "25 Dec 2025".
+- **Bank Holiday Aware:** Integrated UK Bank Holiday API (cache-first) to skip non-business days across England & Wales, Scotland, and Northern Ireland.
+- **Visual Timeline:** Generates interactive Gantt charts (via Plotly) for case management.
 
 ### 2. 💰 Court Fee Calculator (Form EX50)
-*   **Instant Calculation**: Automatically calculates Issue Fees for Money Claims.
-*   **Complex Logic**: Handles all fee brackets, the "5% rule" for claims between £10k-£200k, and the £10,000 cap.
+- **HMCTS Automation:** Instantly calculates issue fees for Money Claims based on Form EX50.
+- **Dynamic Logic:** Handles the "5% Rule" for claims between £10k-£200k and applies the £10,000 cap automatically.
 
-### 3. 📄 High-Performance Document Engineering
-Built on **PyMuPDF** and **pdfplumber**, the toolkit automates bundle preparation:
-*   **Smart Table Extraction**: Uses AI to identify and extract financial tables (e.g., Schedules of Loss) from PDFs into CSV format.
-*   **Automated Bates Stamping**: Applies sequential, formatted numbering to thousands of pages in seconds.
-*   **Clickable TOC Generation**: Automatically creates a nested, navigable Table of Contents.
+### 3. 🤖 Privacy-First AI Assistant
+- **"Cloud Proof" Architecture:** 
+  - *Local Mode:* Uses **Ollama (Llama 3)** to summarize confidential PDFs and extract key dates on-device (GDPR compliant).
+  - *Cloud Mode:* Gracefully degrades to standard features when hosted online to prevent crashes via "Lazy Importing".
+- **Smart Table Extraction:** Integrates **pdfplumber** to identify and extract financial tables (e.g., Schedules of Loss) into structured context for the AI.
 
-### 4. 🤖 Privacy-First AI Assistant
-*   **Local LLM Integration**: Uses **Ollama (Llama 3)** to summarize legal documents locally.
-*   **Cloud-Safe Architecture**: Features "Lazy Importing" to ensure the app runs smoothly on the cloud (in read-only mode) while offering powerful AI features on local machines.
-*   **Data Security**: No client data ever leaves the device.
+### 4. 📁 Bundle Automation
+- **PDF Engine:** Automates Bates Stamping, clickable TOC (Bookmark) generation, and smart merging of court bundles (Practice Direction 5B).
 
 ## 🛠️ Tech Stack
-*   **Language**: Python 3.12+
-*   **Web Framework**: Streamlit
-*   **PDF Engine**: PyMuPDF, pdfplumber
-*   **AI/LLM**: Ollama, Llama 3
-*   **Testing**: unittest, pytest
-*   **CLI**: Rich (for beautiful terminal output)
+- **Frontend:** Streamlit
+- **Core Logic:** Python 3.12+ (pandas, pdfplumber, fitz, rich)
+- **AI/LLM:** Ollama (Llama 3)
+- **Testing:** `unittest` & `pytest`
+- **Documentation:** Auto-generated via `pdoc`
 
-## 📦 Installation & Setup
+## 🚀 Quick Start (Local)
 
-1. **Clone the repository**:
+1. **Clone the repo**
    ```bash
    git clone https://github.com/v4mpire77/legal-toolkit.git
    cd legal-toolkit
    ```
 
-2. **Set up Virtual Environment**:
+2. **Install Dependencies**
    ```bash
    python3 -m venv .venv
    source .venv/bin/activate
    pip install -r requirements.txt
    ```
 
-3. **Run the Dashboard**:
+3. **Run the App**
    ```bash
    streamlit run app.py
    ```
 
-4. **Run via CLI**:
-   ```bash
-   python3 -m legal_toolkit.main deadline --date "tomorrow" --time 16:45
-   ```
+## 🧪 Running Tests
 
-## 🧪 Testing
-
-The project maintains high reliability with a comprehensive test suite.
+To verify the legal logic (Deemed Service and Fees):
 
 ```bash
-# Run all tests
 python3 -m unittest discover tests
 ```
 
-## ⚖️ Legal Disclaimer
-This software is for educational and professional assistance only and does not constitute legal advice. While it implements CPR rules (including the 4:30 PM cutoff), always cross-reference with official [Justice.gov.uk](https://www.justice.gov.uk) documentation.
+---
+
+*Disclaimer: This tool provides guidance based on CPR rules but does not constitute legal advice. Always cross-check with the official [Justice.gov.uk](https://www.justice.gov.uk) documentation.*
