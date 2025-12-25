@@ -11,3 +11,4 @@ INDEX.txt
 
 .gemini/
 gha-creds-*.json
+.streamlit/secrets.toml

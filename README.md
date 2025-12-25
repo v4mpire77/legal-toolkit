@@ -31,9 +31,15 @@ A professional-grade Python suite demonstrating **Legal Engineering**: the inter
 ### 4. 📁 Bundle Automation
 - **PDF Engine:** Automates Bates Stamping, clickable TOC (Bookmark) generation, and smart merging of court bundles (Practice Direction 5B).
 
+### 5. 🔐 Authentication & Data Persistence (New)
+- **Supabase Integration:** Secure Sign-up, Login, and Data Storage using Supabase (PostgreSQL).
+- **Cloud Sync:** Save your deadline calculations and fee estimates to your personal "Case File" and access them anywhere.
+- **Guest Mode:** The app works fully without login, but data will not be saved.
+
 ## 🛠️ Tech Stack
 - **Frontend:** Streamlit
 - **Core Logic:** Python 3.12+ (pandas, pdfplumber, fitz, rich)
+- **Database/Auth:** Supabase
 - **AI/LLM:** Ollama (Llama 3)
 - **Testing:** `unittest` & `pytest`
 - **Documentation:** Auto-generated via `pdoc`
@@ -53,7 +59,19 @@ A professional-grade Python suite demonstrating **Legal Engineering**: the inter
    pip install -r requirements.txt
    ```
 
-3. **Run the App**
+3. **Configure Database (Optional)**
+   To enable User Accounts and Saving:
+   - Create a free project at [Supabase](https://supabase.com).
+   - Go to the SQL Editor and run the contents of `SUPABASE_SCHEMA.sql` to set up the tables and security policies.
+   - Copy your `Project URL` and `anon public key` from Project Settings > API.
+   - Create a `.streamlit/secrets.toml` file:
+     ```toml
+     SUPABASE_URL = "your-project-url"
+     SUPABASE_KEY = "your-anon-key"
+     ```
+   *(If skipped, the app will run in Guest Mode).*
+
+4. **Run the App**
    ```bash
    streamlit run app.py
    ```
