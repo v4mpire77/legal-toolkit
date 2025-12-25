@@ -45,7 +45,7 @@ class AuthManager:
             res = self.client.auth.sign_in_with_oauth({
                 "provider": "google",
                 "options": {
-                    "redirect_to": st.secrets.get("REDIRECT_URL", "http://localhost:8501")
+                    "redirect_to": st.secrets.get("REDIRECT_URL", "https://legal-toolkit.streamlit.app/")
                 }
             })
             return res
