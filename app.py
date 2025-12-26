@@ -22,36 +22,41 @@ st.set_page_config(page_title="Legal Toolkit CLI/GUI", layout="wide")
 
 def show_dashboard(user=None, auth=None):
     st.title("⚖️ Legal Toolkit: Professional Dashboard")
+    st.markdown("### Civil Procedure Rules (CPR) Compliance Automation")
     
     db = None
     if auth and auth.client:
         db = DatabaseManager(auth.client)
 
     if user:
-        st.caption(f"Logged in as: {user.user.email}")
-        if auth and st.sidebar.button("Log Out"):
-            auth.sign_out()
-            st.session_state['user'] = None
-            st.rerun()
-
-    st.markdown("Automating compliance with the Civil Procedure Rules (England & Wales).")
+        with st.sidebar:
+            st.divider()
+            st.write(f"👤 **{user.user.email}**")
+            if auth and st.button("Log Out", use_container_width=True):
+                auth.sign_out()
+                st.session_state['user'] = None
+                st.rerun()
 
     # Sidebar for common settings
-    st.sidebar.header("Global Settings")
+    st.sidebar.header("⚙️ Configuration")
     jurisdiction = st.sidebar.selectbox(
         "Jurisdiction",
-        ['england-and-wales', 'scotland', 'northern-ireland'],
+        ['England & Wales', 'Scotland', 'Northern Ireland'],
         index=0
     )
-    provider = BankHolidayProvider(jurisdiction)
+    # Map friendly name back to internal ID if needed, or update logic
+    jurisdiction_slug = jurisdiction.lower().replace(" & ", "-").replace(" ", "-")
+    provider = BankHolidayProvider(jurisdiction_slug)
 
-    tabs = st.tabs(["📅 Deadline Calculator", "📁 Bundle Indexer & PDF", "🤖 AI Assistant (Beta)", "💰 Fee Calculator", "🗂️ My Cases"])
+    # Tabs - Reordered for workflow priority
+    tabs = st.tabs(["📅 CPR Deadlines", "📁 Bundle Generator", "💰 Issue Fees", "🤖 AI Assistant", "🗂️ Case Manager"])
 
     # --- TAB 1: DEADLINE CALCULATOR ---
     with tabs[0]:
-        st.header("CPR Deadline Calculator")
-        st.markdown("💡 **Tip**: You can enter dates like 'tomorrow', 'Friday', or '25 Dec 2024'")
-        col1, col2 = st.columns(2)
+        st.subheader("Procedural Deadline Calculator")
+        st.info("Calculates deemed service and filing dates in accordance with CPR Part 6 and Part 15.")
+        
+        col1, col2 = st.columns([1, 1])
         
         # Initialize state for inputs if they don't exist
         if 'calc_date' not in st.session_state:
@@ -62,160 +67,104 @@ def show_dashboard(user=None, auth=None):
             st.session_state['extension_days'] = 0
         
         with col1:
+            st.markdown("#### 1. Date of Service")
             # Add a text input option for natural language dates
-            use_natural_language = st.checkbox("Use natural language date input", value=False)
+            use_natural_language = st.checkbox("Use natural language input", value=False, help="Type dates like 'next Monday' or '3 days ago'")
             
             if use_natural_language:
-                date_text = st.text_input("Date of Transmission (e.g., 'tomorrow', 'Friday')", value="today")
+                date_text = st.text_input("Date (e.g., 'yesterday', '25 Dec')", value="today")
                 try:
                     date_input = parse_date(date_text)
                 except ValueError as e:
-                    st.error(f"Could not parse date: {e}")
+                    st.error(f"Invalid date format")
                     date_input = datetime.date.today()
             else:
-                date_input = st.date_input("Date of Transmission", key="calc_date")
+                date_input = st.date_input("Date Document Sent", key="calc_date")
             
-            time_input = st.time_input("Time of Transmission", key="calc_time")
+            time_input = st.time_input("Time Sent (24h)", key="calc_time")
             
-            # --- CPR 15.5 EXTENSION ---
-            st.markdown("---")
+            st.markdown("#### 2. Adjustments")
             extension_days = st.slider(
                 "Agreed Extension (CPR 15.5)", 
                 min_value=0, 
                 max_value=28, 
                 key="extension_days",
-                help="The parties may agree in writing to an extension of up to 28 days for filing a defense."
+                help="Parties may agree to extend the period for filing a defense by up to 28 days."
             )
             
             sent_at = datetime.datetime.combine(date_input, time_input)
             
-            if st.button("Calculate Deadlines"):
+            if st.button("Calculate Deadlines", type="primary", use_container_width=True):
                 deemed, deadline = calculate_deemed_service(sent_at, provider, extension_days=extension_days)
                 
-                st.success(f"**Deemed Service:** {deemed.strftime('%A, %d %B %Y')}")
-                st.warning(f"**Filing Deadline:** {deadline.strftime('%A, %d %B %Y')}")
+                st.divider()
+                r1, r2 = st.columns(2)
+                r1.metric("Deemed Service Date", deemed.strftime('%d %b %Y'), "CPR 6.14")
+                r2.metric("Filing Deadline", deadline.strftime('%d %b %Y'), "CPR 15.4")
                 
+                if extension_days > 0:
+                    st.caption(f"Includes {extension_days} day extension (CPR 15.5).")
+
                 # --- CALENDAR EXPORT ---
                 ics_data = generate_cpr_ics(sent_at, deemed, deadline)
                 st.download_button(
-                    label="📅 Export to Outlook/iCal",
+                    label="📅 Add to Calendar (.ics)",
                     data=ics_data,
                     file_name="cpr_deadlines.ics",
                     mime="text/calendar",
                     use_container_width=True
                 )
-                
-                # Data for Visualization
-                vis_data = [
-                    dict(Task="Transmission", Start=sent_at, Finish=sent_at + datetime.timedelta(hours=1), Type="Actual"),
-                    dict(Task="Deemed Service", Start=deemed, Finish=deemed + datetime.timedelta(days=1), Type="Legal"),
-                    dict(Task="Filing Window", Start=deemed, Finish=deadline, Type="Period"),
-                    dict(Task="Deadline", Start=deadline, Finish=deadline + datetime.timedelta(hours=23), Type="Critical")
-                ]
-                df = pd.DataFrame(vis_data)
-                fig = px.timeline(df, x_start="Start", x_end="Finish", y="Task", color="Type", 
-                                 title="Procedural Timeline")
-                fig.update_yaxes(autorange="reversed")
-                st.plotly_chart(fig, use_container_width=True)
 
                 # --- SAVE FUNCTIONALITY ---
                 if user and db:
-                    st.markdown("---")
-                    with st.expander("💾 Save this Calculation"):
-                        case_ref = st.text_input("Case Reference / Title", placeholder="e.g. Smith v Jones")
-                        if st.button("Save to Profile"):
+                    with st.expander("💾 Save Calculation to Case"):
+                        case_ref = st.text_input("Client Reference / Matter No.", placeholder="e.g. MAT-001")
+                        if st.button("Save Record"):
                             if case_ref:
                                 data_payload = {
                                     "sent_at": sent_at.isoformat(),
                                     "deemed_service": deemed.isoformat(),
                                     "deadline": deadline.isoformat(),
-                                    "jurisdiction": jurisdiction,
+                                    "jurisdiction": jurisdiction_slug,
                                     "extension_days": extension_days
                                 }
                                 db.save_case(user.user.id, case_ref, "deadline", data_payload)
-                                st.success("Saved to profile!")
+                                st.toast("Calculation saved successfully!", icon="✅")
                             else:
-                                st.error("Please enter a Case Reference.")
+                                st.error("Reference required.")
 
     # --- TAB 2: BUNDLE INDEXER & PDF ---
     with tabs[1]:
-        st.header("Smart Bundle Preparation")
-        st.markdown("Combine multiple PDFs, add Bates Stamping, and generate a clickable Index.")
+        st.subheader("eBundle Generator (PD 51O Compliant)")
+        st.markdown("Generates a court-compliant PDF bundle with **Hyperlinked Index**, **Bates Stamping**, and **OCR text**.")
         
-        bundle_path = st.text_input("Directory Path to PDF Documents", os.getcwd())
-        bates_prefix = st.text_input("Bates Prefix", "BUNDLE")
-        output_name = st.text_input("Output Filename", "COURT_BUNDLE_MASTER.pdf")
-        
-        if st.button("Generate Master Bundle"):
-            if not os.path.exists(bundle_path):
-                st.error("Directory not found.")
-            else:
-                engine = PDFEngine()
-                with st.spinner("Processing documents..."):
-                    try:
-                        final_path = engine.generate_smart_bundle(bundle_path, output_name, bates_prefix)
-                        st.success(f"Bundle generated successfully: {final_path}")
-                    except Exception as e:
-                        st.error(f"Error: {str(e)}")
-
-    # --- TAB 3: AI ASSISTANT ---
-    with tabs[2]:
-        st.header("AI Document Assistant")
-        
-        # Check environment variable to see if we are in Cloud Mode
-        is_cloud = os.environ.get('STREAMLIT_RUNTIME') == 'cloud'
-
-        col_cfg1, col_cfg2 = st.columns(2)
-        with col_cfg1:
-            ai_provider = st.radio("Select AI Provider", ["Ollama (Local)", "Gemini (Cloud)"], 
-                                  index=1 if is_cloud else 0,
-                                  help="Ollama is 100% private and offline. Gemini requires a free Google API Key.")
-        
-        provider_slug = "ollama" if "Ollama" in ai_provider else "gemini"
-        
-        # Import here to avoid circular dependencies
-        from legal_toolkit.ai_assistant import AIAssistant
-        ai = AIAssistant(provider=provider_slug)
-
-        if provider_slug == "ollama" and is_cloud:
-            st.warning("⚠️ **Ollama** is not available in Web Demo Mode. Please use **Gemini** or run this app locally.")
-        elif provider_slug == "gemini" and not ai.is_available():
-            st.info("💡 **Setup Required**: To use Gemini, add your `GOOGLE_API_KEY` to `.streamlit/secrets.toml` or your environment variables.")
-            st.markdown("[Get a free Gemini API Key here](https://aistudio.google.com/)")
-        else:
-            status_col, _ = st.columns([1, 3])
-            with status_col:
-                if ai.is_available():
-                    st.success(f"🟢 {ai_provider} is Online")
+        bundle_col1, bundle_col2 = st.columns([2, 1])
+        with bundle_col1:
+            bundle_path = st.text_input("Source Directory", os.getcwd(), help="Absolute path to the folder containing your PDFs.")
+            output_name = st.text_input("Output Filename", "Trial_Bundle_v1.pdf")
+        with bundle_col2:
+            bates_prefix = st.text_input("Bates Prefix", "BUNDLE")
+            st.markdown("<br>", unsafe_allow_html=True) # Spacer
+            if st.button("Generate Bundle", type="primary", use_container_width=True):
+                if not os.path.exists(bundle_path):
+                    st.error("Directory not found.")
                 else:
-                    st.error(f"🔴 {ai_provider} Offline")
-                    if provider_slug == "ollama":
-                        st.caption("Run `ollama serve` in a terminal.")
+                    engine = PDFEngine()
+                    try:
+                        with st.status("Processing Bundle...", expanded=True) as status:
+                            st.write("🔍 Scanning documents...")
+                            st.write("📑 Merging and generating Index...")
+                            final_path = engine.generate_smart_bundle(bundle_path, output_name, bates_prefix)
+                            status.update(label="Bundle Complete!", state="complete", expanded=False)
+                        
+                        st.success(f"Generated: `{final_path}`")
+                    except Exception as e:
+                        st.error(f"Generation Failed: {str(e)}")
 
-            uploaded_file = st.file_uploader("Upload a document for analysis", type=['pdf'])
-            
-            if uploaded_file and ai.is_available():
-                file_bytes = uploaded_file.read()
-                
-                col1, col2 = st.columns(2)
-                with col1:
-                    if st.button("Summarize Particulars of Claim"):
-                        with st.spinner("Analyzing document..."):
-                            summary = ai.summarize_document(file_bytes, "summary")
-                            st.markdown("### 📝 Case Summary")
-                            st.write(summary)
-                
-                with col2:
-                    if st.button("Extract Key Dates"):
-                        with st.spinner("Scanning for dates..."):
-                            dates = ai.summarize_document(file_bytes, "dates")
-                            st.markdown("### 📅 Critical Dates")
-                            st.write(dates)
-
-    # --- TAB 4: FEE CALCULATOR ---
-    with tabs[3]:
-        st.header("Court Issue Fee Calculator")
-        st.markdown("Calculates the issue fee for Money Claims (Form EX50).")
+    # --- TAB 3: FEE CALCULATOR ---
+    with tabs[2]:
+        st.subheader("Issue Fee Calculator")
+        st.caption("Current Civil Proceedings Fees Order 2024")
         
         col1, col2 = st.columns(2)
         
@@ -224,61 +173,100 @@ def show_dashboard(user=None, auth=None):
 
         with col1:
             claim_value = st.number_input(
-                "Value of your Claim (£)", 
+                "Claim Value (£)", 
                 min_value=0.0, 
                 step=100.0, 
                 format="%.2f",
                 key="claim_value"
             )
             
-            if st.button("Calculate Fee"):
+            if st.button("Calculate Fee", use_container_width=True):
                 fee = calculate_issue_fee(claim_value)
-                st.metric(label="Court Fee to Pay", value=fee)
+                st.metric(label="Court Fee Payable", value=f"£{fee:,.2f}")
 
-                # --- SAVE FUNCTIONALITY ---
                 if user and db:
-                    st.markdown("---")
-                    with st.expander("💾 Save Fee Calculation"):
-                        fee_case_ref = st.text_input("Case Reference", placeholder="e.g. Smith Debt", key="fee_ref")
+                    with st.expander("💾 Save Fee Assessment"):
+                        fee_case_ref = st.text_input("Client Ref", key="fee_ref")
                         if st.button("Save Fee"):
                             if fee_case_ref:
                                 db.save_case(user.user.id, fee_case_ref, "fee", {"claim_value": claim_value, "fee": fee})
-                                st.success("Saved to profile!")
+                                st.toast("Fee saved!", icon="✅")
                             else:
-                                st.error("Please enter a Case Reference.")
+                                st.error("Reference required.")
             
         with col2:
-            st.info(
-                """
-                **Fee Brackets (simplified):**
-                * Up to £300: **£35**
-                * £300 - £500: **£50**
-                * £5k - £10k: **£455**
-                * Over £10k: **5% of claim**
-                * Over £200k: **£10,000 (Cap)**
-                """
-            )
+            st.info("Fees are calculated based on the money claim value including interest claimed.")
+
+    # --- TAB 4: AI ASSISTANT ---
+    with tabs[3]:
+        st.subheader("AI Document Analysis")
+        
+        # Check environment variable to see if we are in Cloud Mode
+        is_cloud = os.environ.get('STREAMLIT_RUNTIME') == 'cloud'
+
+        col_cfg1, col_cfg2 = st.columns(2)
+        with col_cfg1:
+            ai_provider = st.radio("Processing Engine", ["Ollama (Local - Private)", "Gemini (Cloud - Fast)"], 
+                                  index=1 if is_cloud else 0)
+        
+        provider_slug = "ollama" if "Ollama" in ai_provider else "gemini"
+        
+        # Import here to avoid circular dependencies
+        from legal_toolkit.ai_assistant import AIAssistant
+        ai = AIAssistant(provider=provider_slug)
+
+        if provider_slug == "ollama" and is_cloud:
+            st.warning("⚠️ **Ollama** is not available in Web Demo Mode. Please switch to Gemini.")
+        elif provider_slug == "gemini" and not ai.is_available():
+            st.warning("⚠️ **API Key Missing**: Set `GOOGLE_API_KEY` in secrets to enable Gemini.")
+        else:
+            status_col, _ = st.columns([1, 3])
+            with status_col:
+                if ai.is_available():
+                    st.success(f"🟢 System Online")
+                else:
+                    st.error(f"🔴 System Offline")
+
+            uploaded_file = st.file_uploader("Upload PDF (Particulars of Claim / Order)", type=['pdf'])
+            
+            if uploaded_file and ai.is_available():
+                file_bytes = uploaded_file.read()
+                
+                c1, c2 = st.columns(2)
+                with c1:
+                    if st.button("📝 Generate Summary", use_container_width=True):
+                        with st.spinner("Analyzing legal context..."):
+                            summary = ai.summarize_document(file_bytes, "summary")
+                            st.markdown("### Case Summary")
+                            st.write(summary)
+                
+                with c2:
+                    if st.button("📅 Extract Dates", use_container_width=True):
+                        with st.spinner("Scanning for procedural dates..."):
+                            dates = ai.summarize_document(file_bytes, "dates")
+                            st.markdown("### Critical Dates")
+                            st.write(dates)
 
     # --- TAB 5: MY CASES ---
     with tabs[4]:
-        st.header("🗂️ My Cases & Saved Data")
+        st.subheader("Case Management")
         
         if not user:
-            st.warning("Please Log In to view your saved cases.")
+            st.warning("Please Log In to access Case Management.")
         elif not db:
             st.error("Database connection unavailable.")
         else:
             cases = db.get_user_cases(user.user.id)
             if not cases:
-                st.info("No saved cases found. Go to other tabs to save your work!")
+                st.info("No active cases. Use the calculators to save your work.")
             else:
                 for case in cases:
-                    with st.expander(f"{case['title']} ({case['case_type'].upper()}) - {parse_date(case['created_at']).strftime('%d %b %Y')}"):
-                        st.json(case['data'])
-                        
-                        btn_col1, btn_col2 = st.columns(2)
-                        with btn_col1:
-                            if st.button("🔄 Load into Calculator", key=f"load_{case['id']}", use_container_width=True):
+                    with st.expander(f"📂 {case['title']} ({case['case_type'].upper()})"):
+                        c1, c2 = st.columns([3, 1])
+                        with c1:
+                             st.json(case['data'])
+                        with c2:
+                            if st.button("🔄 Load", key=f"load_{case['id']}", use_container_width=True):
                                 # Logic to populate session state based on case type
                                 if case['case_type'] == "deadline":
                                     data = case['data']
@@ -286,15 +274,13 @@ def show_dashboard(user=None, auth=None):
                                     st.session_state['calc_date'] = sent_at_dt.date()
                                     st.session_state['calc_time'] = sent_at_dt.time()
                                     st.session_state['extension_days'] = data.get('extension_days', 0)
-                                    st.success(f"Loaded {case['title']} into Deadline tab.")
-                                    # Optional: st.rerun() or set a flag to switch tabs
+                                    st.toast(f"Loaded {case['title']}", icon="📥")
                                 
                                 elif case['case_type'] == "fee":
                                     st.session_state['claim_value'] = float(case['data']['claim_value'])
-                                    st.success(f"Loaded {case['title']} into Fee tab.")
+                                    st.toast(f"Loaded {case['title']}", icon="📥")
                                     
-                        with btn_col2:
-                            if st.button("🗑️ Delete Case", key=f"del_{case['id']}", use_container_width=True):
+                            if st.button("❌ Delete", key=f"del_{case['id']}", use_container_width=True):
                                 db.delete_case(case['id'])
                                 st.rerun()
 
