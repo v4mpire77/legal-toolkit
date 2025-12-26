@@ -16,6 +16,7 @@ from legal_toolkit.utils import parse_date
 from legal_toolkit.fees import calculate_issue_fee
 from legal_toolkit.auth import AuthManager
 from legal_toolkit.db import DatabaseManager
+from legal_toolkit.calendar import generate_cpr_ics
 
 st.set_page_config(page_title="Legal Toolkit CLI/GUI", layout="wide")
 
@@ -75,6 +76,16 @@ def show_dashboard(user=None, auth=None):
                 
                 st.success(f"**Deemed Service:** {deemed.strftime('%A, %d %B %Y')}")
                 st.warning(f"**Filing Deadline:** {deadline.strftime('%A, %d %B %Y')}")
+                
+                # --- CALENDAR EXPORT ---
+                ics_data = generate_cpr_ics(sent_at, deemed, deadline)
+                st.download_button(
+                    label="📅 Export to Outlook/iCal",
+                    data=ics_data,
+                    file_name="cpr_deadlines.ics",
+                    mime="text/calendar",
+                    use_container_width=True
+                )
                 
                 # Data for Visualization
                 vis_data = [

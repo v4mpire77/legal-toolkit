@@ -12,8 +12,8 @@
 
 ## 🚀 NEXT FEATURE: CALENDAR EXPORT
 - **Spec:** `research_notes/NEXT_STEPS_CALENDAR.md`
-- **Goal:** Add a button to download an `.ics` file for calculated deadlines.
-- **Library needed:** `pip install ics`.
+- **Goal:** [COMPLETED] Added a button to download an `.ics` file for calculated deadlines using the `ics` library.
+- **Library added:** `ics`.
 
 ## 📂 KEY FILES
 - `app.py`: Main UI and Tab logic.
