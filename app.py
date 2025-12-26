@@ -53,6 +53,12 @@ def show_dashboard(user=None, auth=None):
         st.markdown("💡 **Tip**: You can enter dates like 'tomorrow', 'Friday', or '25 Dec 2024'")
         col1, col2 = st.columns(2)
         
+        # Initialize state for inputs if they don't exist
+        if 'calc_date' not in st.session_state:
+            st.session_state['calc_date'] = datetime.date.today()
+        if 'calc_time' not in st.session_state:
+            st.session_state['calc_time'] = datetime.time(12, 0)
+        
         with col1:
             # Add a text input option for natural language dates
             use_natural_language = st.checkbox("Use natural language date input", value=False)
@@ -65,9 +71,9 @@ def show_dashboard(user=None, auth=None):
                     st.error(f"Could not parse date: {e}")
                     date_input = datetime.date.today()
             else:
-                date_input = st.date_input("Date of Transmission", datetime.date.today())
+                date_input = st.date_input("Date of Transmission", key="calc_date")
             
-            time_input = st.time_input("Time of Transmission", datetime.time(12, 0))
+            time_input = st.time_input("Time of Transmission", key="calc_time")
             
             sent_at = datetime.datetime.combine(date_input, time_input)
             
@@ -200,12 +206,16 @@ def show_dashboard(user=None, auth=None):
         
         col1, col2 = st.columns(2)
         
+        if 'claim_value' not in st.session_state:
+            st.session_state['claim_value'] = 0.0
+
         with col1:
             claim_value = st.number_input(
                 "Value of your Claim (£)", 
                 min_value=0.0, 
                 step=100.0, 
-                format="%.2f"
+                format="%.2f",
+                key="claim_value"
             )
             
             if st.button("Calculate Fee"):
@@ -252,9 +262,27 @@ def show_dashboard(user=None, auth=None):
                 for case in cases:
                     with st.expander(f"{case['title']} ({case['case_type'].upper()}) - {parse_date(case['created_at']).strftime('%d %b %Y')}"):
                         st.json(case['data'])
-                        if st.button("Delete Case", key=f"del_{case['id']}"):
-                            db.delete_case(case['id'])
-                            st.rerun()
+                        
+                        btn_col1, btn_col2 = st.columns(2)
+                        with btn_col1:
+                            if st.button("🔄 Load into Calculator", key=f"load_{case['id']}", use_container_width=True):
+                                # Logic to populate session state based on case type
+                                if case['case_type'] == "deadline":
+                                    data = case['data']
+                                    sent_at_dt = datetime.datetime.fromisoformat(data['sent_at'])
+                                    st.session_state['calc_date'] = sent_at_dt.date()
+                                    st.session_state['calc_time'] = sent_at_dt.time()
+                                    st.success(f"Loaded {case['title']} into Deadline tab.")
+                                    # Optional: st.rerun() or set a flag to switch tabs
+                                
+                                elif case['case_type'] == "fee":
+                                    st.session_state['claim_value'] = float(case['data']['claim_value'])
+                                    st.success(f"Loaded {case['title']} into Fee tab.")
+                                    
+                        with btn_col2:
+                            if st.button("🗑️ Delete Case", key=f"del_{case['id']}", use_container_width=True):
+                                db.delete_case(case['id'])
+                                st.rerun()
 
 # --- MAIN EXECUTION ---
 auth = AuthManager()
