@@ -22,12 +22,13 @@ logging.basicConfig(level=logging.INFO)
 
 console = Console()
 
-def calculate_deemed_service(sent_at: datetime.datetime, provider: BankHolidayProvider):
+def calculate_deemed_service(sent_at: datetime.datetime, provider: BankHolidayProvider, extension_days: int = 0):
     """
     Calculates Deemed Service based on CPR 6.14 and 6.26.
     
     CPR 6.26: 4:30 PM Cutoff.
     CPR 6.14: Deemed served on the second business day after the effective step.
+    CPR 15.5: Optional agreed extension (up to 28 days).
     """
     # 1. Normalize Sent Date (CPR 6.26)
     cutoff_time = datetime.time(16, 30)
@@ -59,15 +60,21 @@ def calculate_deemed_service(sent_at: datetime.datetime, provider: BankHolidayPr
     
     # 3. Calculate Filing Deadline (AOS/Defence - 14 Days)
     # CPR 10.3(1)(b)
-    base_deadline = deemed_date + datetime.timedelta(days=14)
+    base_days = 14 + extension_days
+    base_deadline = deemed_date + datetime.timedelta(days=base_days)
+    
+    if extension_days > 0:
+        console.print(f"\n[bold cyan][Step 3: CPR 15.5 - Agreed Extension][/bold cyan]")
+        console.print(f"Adjustment:          Added {extension_days} days agreed extension.")
+
     final_deadline = base_deadline
     if not provider.is_business_day(base_deadline):
         final_deadline = provider.next_business_day(base_deadline)
-        console.print(f"\n[bold cyan][Step 3: CPR 2.8(5) - Deadline Adjustment][/bold cyan]")
-        console.print(f"Condition:           14-day deadline fell on a weekend/holiday.")
+        console.print(f"\n[bold cyan][Step 4: CPR 2.8(5) - Deadline Adjustment][/bold cyan]")
+        console.print(f"Condition:           Deadline fell on a weekend/holiday.")
         console.print(f"Filing Deadline:     Moved to [green]{final_deadline.strftime('%A, %d %B %Y')}[/green]")
     else:
-        console.print(f"\n[bold cyan][Step 3: CPR 10.3(1)(b) - Standard Deadline][/bold cyan]")
+        console.print(f"\n[bold cyan][Step 4: CPR 10.3(1)(b) - Final Deadline][/bold cyan]")
         console.print(f"Filing Deadline:     [green]{final_deadline.strftime('%A, %d %B %Y')}[/green]")
 
     # Create results table
@@ -83,7 +90,7 @@ def calculate_deemed_service(sent_at: datetime.datetime, provider: BankHolidayPr
     
     return deemed_date, final_deadline
 
-def calculate_cpr_deadline(date_str, time_str="12:00", jurisdiction='england-and-wales'):
+def calculate_cpr_deadline(date_str, time_str="12:00", jurisdiction='england-and-wales', extension_days: int = 0):
     """
     Calculates filing deadlines based on CPR.
     Returns a dictionary of dates instead of printing them.
@@ -103,7 +110,7 @@ def calculate_cpr_deadline(date_str, time_str="12:00", jurisdiction='england-and
         return {"error": str(e)}
 
     # Calculate the dates (this function already returns the date objects)
-    deemed_date, final_deadline = calculate_deemed_service(sent_at, provider)
+    deemed_date, final_deadline = calculate_deemed_service(sent_at, provider, extension_days)
 
     # RETURN the data in a structure we can test and use in the GUI
     return {

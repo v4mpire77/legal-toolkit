@@ -58,6 +58,8 @@ def show_dashboard(user=None, auth=None):
             st.session_state['calc_date'] = datetime.date.today()
         if 'calc_time' not in st.session_state:
             st.session_state['calc_time'] = datetime.time(12, 0)
+        if 'extension_days' not in st.session_state:
+            st.session_state['extension_days'] = 0
         
         with col1:
             # Add a text input option for natural language dates
@@ -75,10 +77,20 @@ def show_dashboard(user=None, auth=None):
             
             time_input = st.time_input("Time of Transmission", key="calc_time")
             
+            # --- CPR 15.5 EXTENSION ---
+            st.markdown("---")
+            extension_days = st.slider(
+                "Agreed Extension (CPR 15.5)", 
+                min_value=0, 
+                max_value=28, 
+                key="extension_days",
+                help="The parties may agree in writing to an extension of up to 28 days for filing a defense."
+            )
+            
             sent_at = datetime.datetime.combine(date_input, time_input)
             
             if st.button("Calculate Deadlines"):
-                deemed, deadline = calculate_deemed_service(sent_at, provider)
+                deemed, deadline = calculate_deemed_service(sent_at, provider, extension_days=extension_days)
                 
                 st.success(f"**Deemed Service:** {deemed.strftime('%A, %d %B %Y')}")
                 st.warning(f"**Filing Deadline:** {deadline.strftime('%A, %d %B %Y')}")
@@ -117,7 +129,8 @@ def show_dashboard(user=None, auth=None):
                                     "sent_at": sent_at.isoformat(),
                                     "deemed_service": deemed.isoformat(),
                                     "deadline": deadline.isoformat(),
-                                    "jurisdiction": jurisdiction
+                                    "jurisdiction": jurisdiction,
+                                    "extension_days": extension_days
                                 }
                                 db.save_case(user.user.id, case_ref, "deadline", data_payload)
                                 st.success("Saved to profile!")
@@ -272,6 +285,7 @@ def show_dashboard(user=None, auth=None):
                                     sent_at_dt = datetime.datetime.fromisoformat(data['sent_at'])
                                     st.session_state['calc_date'] = sent_at_dt.date()
                                     st.session_state['calc_time'] = sent_at_dt.time()
+                                    st.session_state['extension_days'] = data.get('extension_days', 0)
                                     st.success(f"Loaded {case['title']} into Deadline tab.")
                                     # Optional: st.rerun() or set a flag to switch tabs
                                 

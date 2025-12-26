@@ -1,5 +1,8 @@
 # 🤖 MISSION RESUME: LEGAL TOOLKIT
 
+## 📝 URGENT TODO
+- [ ] **Google AI Key:** Generate key at [AI Studio](https://aistudio.google.com/) and add to Streamlit Secrets as `GOOGLE_API_KEY`.
+
 ## 📍 CURRENT STATUS
 - **Deployment:** Live on [legal-toolkit.streamlit.app](https://legal-toolkit.streamlit.app/)
 - **Infrastructure:** Supabase Auth & DB are 100% configured (Email/Pass works).
