@@ -17,6 +17,7 @@ from legal_toolkit.fees import calculate_issue_fee
 from legal_toolkit.auth import AuthManager
 from legal_toolkit.db import DatabaseManager
 from legal_toolkit.calendar import generate_cpr_ics
+from legal_toolkit.audit import AuditGenerator
 
 st.set_page_config(page_title="Legal Toolkit CLI/GUI", layout="wide")
 
@@ -266,6 +267,18 @@ def show_dashboard(user=None, auth=None):
                         with c1:
                              st.json(case['data'])
                         with c2:
+                            # Audit Report Generator
+                            audit_gen = AuditGenerator()
+                            pdf_data = audit_gen.generate_report(case, user.user.email)
+                            st.download_button(
+                                "🖨️ Export Audit", 
+                                data=pdf_data, 
+                                file_name=f"Audit_{case['title']}.pdf", 
+                                mime="application/pdf", 
+                                key=f"audit_{case['id']}",
+                                use_container_width=True
+                            )
+
                             if st.button("🔄 Load", key=f"load_{case['id']}", use_container_width=True):
                                 # Logic to populate session state based on case type
                                 if case['case_type'] == "deadline":
