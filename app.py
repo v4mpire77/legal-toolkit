@@ -278,12 +278,30 @@ else:
                         st.success("Logged in successfully!")
                         st.rerun()
             with col2:
-                # Google OAuth
-                if st.button("🚀 Sign in with Google", use_container_width=True):
-                    res = auth.sign_in_with_google()
-                    if res and hasattr(res, 'url'):
-                        st.markdown(f'<meta http-equiv="refresh" content="0; url={res.url}">', unsafe_allow_html=True)
-                        st.info("Redirecting to Google...")
+                # Google OAuth - Direct Link to avoid 403 Iframe Error
+                # We pre-fetch the URL and render it as a standard HTML link with target="_top"
+                oauth_res = auth.sign_in_with_google()
+                if oauth_res and hasattr(oauth_res, 'url'):
+                    st.markdown(
+                        f'''
+                        <a href="{oauth_res.url}" target="_top" style="
+                            display: inline-block;
+                            width: 100%;
+                            padding: 0.5rem;
+                            color: #31333F;
+                            background-color: #FFFFFF;
+                            border: 1px solid rgba(49, 51, 63, 0.2);
+                            border-radius: 0.5rem;
+                            text-align: center;
+                            text-decoration: none;
+                            font-weight: 400;
+                            margin-top: 2px;
+                        ">
+                            🚀 Sign in with Google
+                        </a>
+                        ''',
+                        unsafe_allow_html=True
+                    )
         
         with signup_tab:
             st.header("Create Account")
