@@ -10,3 +10,4 @@ pdfplumber
 rich
 ics
 supabase
+google-generativeai

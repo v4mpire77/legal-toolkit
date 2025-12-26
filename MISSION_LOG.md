@@ -15,6 +15,11 @@
 - **Goal:** [COMPLETED] Added a button to download an `.ics` file for calculated deadlines using the `ics` library.
 - **Library added:** `ics`.
 
+## 🤖 HYBRID AI ASSISTANT (GEMINI + OLLAMA)
+- **Goal:** [COMPLETED] Enable AI features on Streamlit Cloud using Google Gemini API (Free Tier).
+- **Logic:** App now toggles between Ollama (Local/Private) and Gemini (Cloud/Public).
+- **Action Required:** User needs to generate a `GOOGLE_API_KEY` at [AI Studio](https://aistudio.google.com/) and add it to secrets.
+
 ## 📂 KEY FILES
 - `app.py`: Main UI and Tab logic.
 - `legal_toolkit/auth.py`: Supabase & Google login logic.

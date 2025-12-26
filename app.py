@@ -141,28 +141,37 @@ def show_dashboard(user=None, auth=None):
 
     # --- TAB 3: AI ASSISTANT ---
     with tabs[2]:
-        st.header("Local AI Document Assistant")
+        st.header("AI Document Assistant")
         
         # Check environment variable to see if we are in Cloud Mode
         is_cloud = os.environ.get('STREAMLIT_RUNTIME') == 'cloud'
 
-        if is_cloud:
-            st.info("☁️ **Web Demo Mode**: Local AI features are disabled to protect server resources.")
-            st.warning("To use the AI features (Llama3), please clone this repository and run it locally.")
+        col_cfg1, col_cfg2 = st.columns(2)
+        with col_cfg1:
+            ai_provider = st.radio("Select AI Provider", ["Ollama (Local)", "Gemini (Cloud)"], 
+                                  index=1 if is_cloud else 0,
+                                  help="Ollama is 100% private and offline. Gemini requires a free Google API Key.")
+        
+        provider_slug = "ollama" if "Ollama" in ai_provider else "gemini"
+        
+        # Import here to avoid circular dependencies
+        from legal_toolkit.ai_assistant import AIAssistant
+        ai = AIAssistant(provider=provider_slug)
+
+        if provider_slug == "ollama" and is_cloud:
+            st.warning("⚠️ **Ollama** is not available in Web Demo Mode. Please use **Gemini** or run this app locally.")
+        elif provider_slug == "gemini" and not ai.is_available():
+            st.info("💡 **Setup Required**: To use Gemini, add your `GOOGLE_API_KEY` to `.streamlit/secrets.toml` or your environment variables.")
+            st.markdown("[Get a free Gemini API Key here](https://aistudio.google.com/)")
         else:
-            st.info("This feature uses a Local LLM (Ollama) to ensure client confidentiality remains on-device.")
-            
-            # Import here to avoid circular dependencies
-            from legal_toolkit.ai_assistant import AIAssistant
-            ai = AIAssistant(model_name="llama3")
-            
             status_col, _ = st.columns([1, 3])
             with status_col:
                 if ai.is_available():
-                    st.success("🟢 Ollama is Online")
+                    st.success(f"🟢 {ai_provider} is Online")
                 else:
-                    st.error("🔴 Ollama Offline")
-                    st.caption("Run `ollama serve` in a terminal.")
+                    st.error(f"🔴 {ai_provider} Offline")
+                    if provider_slug == "ollama":
+                        st.caption("Run `ollama serve` in a terminal.")
 
             uploaded_file = st.file_uploader("Upload a document for analysis", type=['pdf'])
             
